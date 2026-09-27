@@ -1,0 +1,81 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: GitHub Release tag to publish
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/gridforge-spatial
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Resolve release tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a release tag in vX.Y.Z form; got: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          echo "GRIDFORGE_RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "GRIDFORGE_RELEASE_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+
+      - name: Download existing GitHub Release distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download "$GRIDFORGE_RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.whl' \
+            --pattern '*.tar.gz' \
+            --dir dist
+
+      - name: Validate release distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          sdists=(dist/*.tar.gz)
+          files=(dist/*)
+
+          if [[ ${#wheels[@]} -ne 1 || ${#sdists[@]} -ne 1 || ${#files[@]} -ne 2 ]]; then
+            echo "Expected exactly one wheel and one source distribution; found ${#wheels[@]} wheel(s), ${#sdists[@]} sdist(s), and ${#files[@]} total file(s)." >&2
+            exit 1
+          fi
+
+          wheel_name=${wheels[0]##*/}
+          sdist_name=${sdists[0]##*/}
+          case "$wheel_name" in
+            "gridforge_spatial-${GRIDFORGE_RELEASE_VERSION}-"*.whl) ;;
+            *) echo "Unexpected wheel for release ${GRIDFORGE_RELEASE_TAG}: $wheel_name" >&2; exit 1 ;;
+          esac
+          if [[ "$sdist_name" != "gridforge_spatial-${GRIDFORGE_RELEASE_VERSION}.tar.gz" ]]; then
+            echo "Unexpected source distribution for release ${GRIDFORGE_RELEASE_TAG}: $sdist_name" >&2
+            exit 1
+          fi
+
+          printf 'Validated release artifacts:\n- %s\n- %s\n' "$wheel_name" "$sdist_name"
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
