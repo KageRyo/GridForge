@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gridforge-spatial"
+version = "0.1.0"
+description = "Deterministic spatial grid alignment and dataset engineering toolkit"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "KageRyo" }]
+keywords = ["geospatial", "spatial-data", "grid", "raster", "vector"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+  "affine>=2.4",
+  "geopandas>=1.0",
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "pyarrow>=16",
+  "pyproj>=3.6",
+  "PyYAML>=6.0",
+  "rasterio>=1.4.4",
+  "shapely>=2.0",
+  "typer>=0.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/KageRyo/GridForge"
+Repository = "https://github.com/KageRyo/GridForge"
+Issues = "https://github.com/KageRyo/GridForge/issues"
+
+[project.scripts]
+gridforge = "gridforge.cli:app"
+
+[dependency-groups]
+dev = [
+  "build>=1.2",
+  "pytest>=8.3",
+  "ruff>=0.12",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gridforge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
