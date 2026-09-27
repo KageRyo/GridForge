@@ -1,6 +1,7 @@
 # GridForge
 
 [![CI](https://github.com/KageRyo/GridForge/actions/workflows/ci.yml/badge.svg)](https://github.com/KageRyo/GridForge/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/gridforge-spatial)](https://pypi.org/project/gridforge-spatial/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
