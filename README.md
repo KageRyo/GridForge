@@ -9,8 +9,6 @@ GridForge is a Python toolkit and CLI for building canonical spatial grids and a
 
 Ordinary spatial joins answer questions such as which features intersect a geometry. They do not by themselves define stable cell IDs, edge behavior, coverage calculations, raster resampling, missing-cell policy, or whether two outputs use the same grid. GridForge makes those choices explicit.
 
-GridForge was extracted from spatial data engineering patterns developed for real-world digital-twin and environmental data pipelines. It is independent of those systems and does not depend on their schemas or private data.
-
 ## Install
 
 The PyPI distribution is named `gridforge-spatial` because `gridforge` is already used by an unrelated package. The Python import and executable remain `gridforge`.
