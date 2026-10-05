@@ -50,14 +50,18 @@ jobs:
           persist-credentials: false
 
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.5"
       - run: uv python install 3.12
       - name: Verify selected tag and test locked release source
+        env:
+          PYTHONPATH: src
         run: |
           python -c 'import os, tomllib; project = tomllib.load(open("pyproject.toml", "rb"))["project"]; assert os.environ["GRIDFORGE_RELEASE_VERSION"] == project["version"]'
-          uv sync --locked --all-groups --python 3.12
-          uv run --locked ruff check .
-          uv run --locked ruff format --check .
-          uv run --locked pytest -q
+          uv sync --locked --all-groups --no-install-project --no-build --python 3.12
+          uv run --locked --no-sync --no-build ruff check .
+          uv run --locked --no-sync --no-build ruff format --check .
+          uv run --locked --no-sync --no-build pytest -q
 
       - name: Download existing GitHub Release distributions
         env:

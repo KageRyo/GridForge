@@ -11,8 +11,10 @@ from email.parser import BytesParser
 from pathlib import Path
 
 
-def validate_release(tag: str, project_file: Path, distributions: Path) -> None:
-    if re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag) is None:
+def validate_release(
+    tag: str, project_file: Path = Path("pyproject.toml"), distributions: Path = Path("dist")
+) -> None:
+    if re.fullmatch(r"v\d+\.\d+\.\d+", tag, flags=re.ASCII) is None:
         raise ValueError("expected release tag in vX.Y.Z form")
     project = tomllib.loads(project_file.read_text(encoding="utf-8"))["project"]
     version = tag[1:]
@@ -27,14 +29,26 @@ def validate_release(tag: str, project_file: Path, distributions: Path) -> None:
     if sdists[0].name != f"gridforge_spatial-{version}.tar.gz":
         raise ValueError("source distribution filename does not match selected version")
 
-    with zipfile.ZipFile(wheels[0]) as archive:
+    wheel_metadata, sdist_metadata = _read_metadata(wheels[0], sdists[0], version)
+    for metadata in (wheel_metadata, sdist_metadata):
+        message = BytesParser().parsebytes(metadata)
+        names = message.get_all("Name", [])
+        versions = message.get_all("Version", [])
+        if len(names) != 1 or re.sub(r"[-_.]+", "-", names[0]).lower() != project["name"]:
+            raise ValueError("embedded distribution name does not match project")
+        if versions != [version]:
+            raise ValueError("embedded distribution version does not match selected tag")
+
+
+def _read_metadata(wheel: Path, sdist: Path, version: str) -> tuple[bytes, bytes]:
+    with zipfile.ZipFile(wheel) as archive:
         metadata_paths = [
             name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
         ]
         if len(metadata_paths) != 1:
             raise ValueError("expected exactly one wheel METADATA")
         wheel_metadata = archive.read(metadata_paths[0])
-    with tarfile.open(sdists[0], "r:gz") as archive:
+    with tarfile.open(sdist, "r:gz") as archive:
         metadata_paths = [
             member
             for member in archive.getmembers()
@@ -46,21 +60,12 @@ def validate_release(tag: str, project_file: Path, distributions: Path) -> None:
         if stream is None:
             raise ValueError("source distribution PKG-INFO is unreadable")
         sdist_metadata = stream.read()
-    for metadata in (wheel_metadata, sdist_metadata):
-        message = BytesParser().parsebytes(metadata)
-        names = message.get_all("Name", [])
-        versions = message.get_all("Version", [])
-        if len(names) != 1 or re.sub(r"[-_.]+", "-", names[0]).lower() != project["name"]:
-            raise ValueError("embedded distribution name does not match project")
-        if versions != [version]:
-            raise ValueError("embedded distribution version does not match selected tag")
+    return wheel_metadata, sdist_metadata
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("tag")
-    parser.add_argument("--project", type=Path, default=Path("pyproject.toml"))
-    parser.add_argument("--dist", type=Path, default=Path("dist"))
     args = parser.parse_args()
-    validate_release(args.tag, args.project, args.dist)
+    validate_release(args.tag)
     print(f"Validated embedded wheel/sdist metadata for {args.tag}")

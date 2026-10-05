@@ -1,6 +1,6 @@
 # Maintenance
 
-Dependency and GitHub Actions updates are proposed weekly by Dependabot, with grouped updates and a small open-PR limit. Review behavior changes and merge only after required CI passes; automatic merging and mandatory human approvals are not configured.
+Dependency and GitHub Actions updates are proposed weekly by Dependabot (the native `uv` ecosystem maintains `uv.lock`), with grouped updates and a small open-PR limit. Review behavior changes and merge only after required CI passes; automatic merging and mandatory human approvals are not configured.
 
 External Actions are pinned to verified full commit SHAs with readable version comments. Update the SHA and comment together. Pinning an Action implementation does not freeze a Rust stable toolchain or every transitive package; committed lockfiles define the resolved dependencies where available.
 
