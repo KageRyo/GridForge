@@ -182,3 +182,7 @@ GridForge does not provide map rendering, a server, an ETL scheduler, a machine-
 ## License
 
 GridForge is licensed under Apache-2.0. See [LICENSE](LICENSE).
+
+## Maintenance
+
+See [maintenance conventions](docs/maintenance.md) for dependency updates, required CI, Action pinning and release validation.
