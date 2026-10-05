@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: src
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -17,9 +20,9 @@ jobs:
         with:
           version: "0.12.5"
       - run: uv python install 3.12
-      - run: uv sync --locked --all-groups --python 3.12
-      - run: uv run --locked ruff check .
-      - run: uv run --locked ruff format --check .
+      - run: uv sync --locked --all-groups --no-install-project --no-build --python 3.12
+      - run: uv run --locked --no-sync --no-build ruff check .
+      - run: uv run --locked --no-sync --no-build ruff format --check .
 
   tests:
     runs-on: ubuntu-latest
@@ -33,8 +36,8 @@ jobs:
         with:
           version: "0.12.5"
       - run: uv python install ${{ matrix.python-version }}
-      - run: uv sync --locked --all-groups --python ${{ matrix.python-version }}
-      - run: uv run --locked --python ${{ matrix.python-version }} pytest -q
+      - run: uv sync --locked --all-groups --no-install-project --no-build --python ${{ matrix.python-version }}
+      - run: uv run --locked --no-sync --no-build --python ${{ matrix.python-version }} pytest -q
 
   build:
     runs-on: ubuntu-latest
@@ -44,7 +47,7 @@ jobs:
         with:
           version: "0.12.5"
       - run: uv python install 3.12
-      - run: uv sync --locked --all-groups --python 3.12
+      - run: uv sync --locked --all-groups --no-install-project --no-build --python 3.12
       - run: uv build
       - name: Install and exercise built wheel in a clean environment
         shell: bash
