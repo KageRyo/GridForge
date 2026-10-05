@@ -54,7 +54,7 @@ jobs:
           wheels=(dist/*.whl)
           test "${#wheels[@]}" -eq 1
           uv venv --python 3.12 "$RUNNER_TEMP/gridforge-wheel"
-          uv pip install --python "$RUNNER_TEMP/gridforge-wheel/bin/python" "${wheels[0]}"
+          uv pip install --no-build --python "$RUNNER_TEMP/gridforge-wheel/bin/python" "${wheels[0]}"
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/gridforge-wheel/bin/python" -c 'import gridforge, pathlib; assert "site-packages" in pathlib.Path(gridforge.__file__).resolve().parts'
           "$RUNNER_TEMP/gridforge-wheel/bin/gridforge" --help

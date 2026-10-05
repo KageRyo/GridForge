@@ -57,6 +57,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
+          set -euo pipefail
           python -c 'import os, tomllib; project = tomllib.load(open("pyproject.toml", "rb"))["project"]; assert os.environ["GRIDFORGE_RELEASE_VERSION"] == project["version"]'
           uv sync --locked --all-groups --no-install-project --no-build --python 3.12
           uv run --locked --no-sync --no-build ruff check .
@@ -80,8 +81,9 @@ jobs:
 
       - name: Clean wheel CLI smoke test
         run: |
+          set -euo pipefail
           uv venv --python 3.12 "$RUNNER_TEMP/gridforge-wheel"
-          uv pip install --python "$RUNNER_TEMP/gridforge-wheel/bin/python" dist/*.whl
+          uv pip install --no-build --python "$RUNNER_TEMP/gridforge-wheel/bin/python" dist/*.whl
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/gridforge-wheel/bin/gridforge" --help
           "$RUNNER_TEMP/gridforge-wheel/bin/gridforge" demo --output-dir "$RUNNER_TEMP/gridforge-demo"
