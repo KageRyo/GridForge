@@ -8,7 +8,6 @@ on:
       tag:
         description: GitHub Release tag to publish
         required: true
-        default: v0.1.0
 
 permissions:
   contents: read
@@ -36,6 +35,35 @@ jobs:
           echo "GRIDFORGE_RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
           echo "GRIDFORGE_RELEASE_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
 
+      - name: Check out workflow validation tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Preserve release validator before checking out historical source
+        run: cp scripts/validate_release.py "$RUNNER_TEMP/validate_release.py"
+
+      - name: Check out selected release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.GRIDFORGE_RELEASE_TAG }}
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.5"
+      - run: uv python install 3.12
+      - name: Verify selected tag and test locked release source
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -c 'import os, tomllib; project = tomllib.load(open("pyproject.toml", "rb"))["project"]; assert os.environ["GRIDFORGE_RELEASE_VERSION"] == project["version"]'
+          uv sync --locked --all-groups --no-install-project --no-build --python 3.12
+          uv run --locked --no-sync --no-build ruff check .
+          uv run --locked --no-sync --no-build ruff format --check .
+          uv run --locked --no-sync --no-build pytest -q
+
       - name: Download existing GitHub Release distributions
         env:
           GH_TOKEN: ${{ github.token }}
@@ -49,33 +77,18 @@ jobs:
             --dir dist
 
       - name: Validate release distributions
-        shell: bash
+        run: python "$RUNNER_TEMP/validate_release.py" "$GRIDFORGE_RELEASE_TAG"
+
+      - name: Clean wheel CLI smoke test
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          wheels=(dist/*.whl)
-          sdists=(dist/*.tar.gz)
-          files=(dist/*)
-
-          if [[ ${#wheels[@]} -ne 1 || ${#sdists[@]} -ne 1 || ${#files[@]} -ne 2 ]]; then
-            echo "Expected exactly one wheel and one source distribution; found ${#wheels[@]} wheel(s), ${#sdists[@]} sdist(s), and ${#files[@]} total file(s)." >&2
-            exit 1
-          fi
-
-          wheel_name=${wheels[0]##*/}
-          sdist_name=${sdists[0]##*/}
-          case "$wheel_name" in
-            "gridforge_spatial-${GRIDFORGE_RELEASE_VERSION}-"*.whl) ;;
-            *) echo "Unexpected wheel for release ${GRIDFORGE_RELEASE_TAG}: $wheel_name" >&2; exit 1 ;;
-          esac
-          if [[ "$sdist_name" != "gridforge_spatial-${GRIDFORGE_RELEASE_VERSION}.tar.gz" ]]; then
-            echo "Unexpected source distribution for release ${GRIDFORGE_RELEASE_TAG}: $sdist_name" >&2
-            exit 1
-          fi
-
-          printf 'Validated release artifacts:\n- %s\n- %s\n' "$wheel_name" "$sdist_name"
+          uv venv --python 3.12 "$RUNNER_TEMP/gridforge-wheel"
+          uv pip install --no-build --python "$RUNNER_TEMP/gridforge-wheel/bin/python" dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/gridforge-wheel/bin/gridforge" --help
+          "$RUNNER_TEMP/gridforge-wheel/bin/gridforge" demo --output-dir "$RUNNER_TEMP/gridforge-demo"
 
       - name: Publish distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: dist/

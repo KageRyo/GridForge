@@ -8,16 +8,21 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: src
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.5"
       - run: uv python install 3.12
-      - run: uv sync --all-groups --python 3.12
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
+      - run: uv sync --locked --all-groups --no-install-project --no-build --python 3.12
+      - run: uv run --locked --no-sync --no-build ruff check .
+      - run: uv run --locked --no-sync --no-build ruff format --check .
 
   tests:
     runs-on: ubuntu-latest
@@ -26,17 +31,34 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.5"
       - run: uv python install ${{ matrix.python-version }}
-      - run: uv sync --all-groups --python ${{ matrix.python-version }}
-      - run: uv run --python ${{ matrix.python-version }} pytest -q
+      - run: uv sync --locked --all-groups --no-install-project --no-build --python ${{ matrix.python-version }}
+      - run: uv run --locked --no-sync --no-build --python ${{ matrix.python-version }} pytest -q
 
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.5"
       - run: uv python install 3.12
-      - run: uv sync --all-groups --python 3.12
+      - run: uv sync --locked --all-groups --no-install-project --no-build --python 3.12
       - run: uv build
+      - name: Install and exercise built wheel in a clean environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          test "${#wheels[@]}" -eq 1
+          uv venv --python 3.12 "$RUNNER_TEMP/gridforge-wheel"
+          uv pip install --no-build --python "$RUNNER_TEMP/gridforge-wheel/bin/python" "${wheels[0]}"
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/gridforge-wheel/bin/python" -c 'import gridforge, pathlib; assert "site-packages" in pathlib.Path(gridforge.__file__).resolve().parts'
+          "$RUNNER_TEMP/gridforge-wheel/bin/gridforge" --help
+          "$RUNNER_TEMP/gridforge-wheel/bin/gridforge" demo --output-dir "$RUNNER_TEMP/gridforge-demo"
