@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
+from gridforge import __version__
 from gridforge.grid.build import create_grid
 from gridforge.grid.spec import GridSpec
 from gridforge.provenance import write_provenance
@@ -31,7 +32,7 @@ def test_provenance_records_spatial_operation_and_grid_identity(tmp_path) -> Non
     value = json.loads(path.read_text(encoding="utf-8"))
 
     assert path.name == "features.parquet.gridforge.json"
-    assert value["gridforge_version"] == "0.1.0"
+    assert value["gridforge_version"] == __version__
     assert value["operation"] == "point_alignment"
     assert value["source"] == "stations.csv"
     assert value["grid_fingerprint"] == grid["grid_fingerprint"].iloc[0]

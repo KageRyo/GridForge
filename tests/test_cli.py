@@ -7,6 +7,7 @@ from affine import Affine
 from shapely.geometry import box
 from typer.testing import CliRunner
 
+from gridforge import __version__
 from gridforge.cli import app
 from gridforge.grid.build import create_grid
 from gridforge.grid.spec import GridSpec
@@ -26,7 +27,7 @@ def test_version_is_available() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.1.0"
+    assert result.stdout.strip() == __version__
 
 
 def test_cli_build_align_join_and_validate_workflow(tmp_path) -> None:
