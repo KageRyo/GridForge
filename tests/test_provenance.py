@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
+
+import pytest
 
 from gridforge import __version__
 from gridforge.grid.build import create_grid
@@ -39,3 +42,35 @@ def test_provenance_records_spatial_operation_and_grid_identity(tmp_path) -> Non
     assert value["grid_spec"] == grid.attrs["gridforge_spec"]
     assert value["parameters"]["aggregation"] == {"rainfall": "mean"}
     assert datetime.fromisoformat(value["created_at"].replace("Z", "+00:00")).tzinfo
+
+
+@pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
+def test_provenance_does_not_follow_preexisting_temporary_links(tmp_path, link_kind):
+    grid = create_grid(
+        GridSpec.from_mapping(
+            {
+                "crs": "EPSG:3826",
+                "cell_size": 20,
+                "bounds": {"min_x": 0, "min_y": 0, "max_x": 20, "max_y": 20},
+                "origin": {"x": 0, "y": 20},
+            }
+        )
+    )
+    outside = tmp_path / "outside.json"
+    outside.write_text("keep outside data", encoding="utf-8")
+    planted = tmp_path / ".features.parquet.gridforge.json.tmp"
+    if link_kind == "symlink":
+        planted.symlink_to(outside)
+    else:
+        os.link(outside, planted)
+
+    sidecar = write_provenance(
+        tmp_path / "features.parquet",
+        operation="point_alignment",
+        source="stations.csv",
+        grid=grid,
+        parameters={},
+    )
+
+    assert outside.read_text(encoding="utf-8") == "keep outside data"
+    assert json.loads(sidecar.read_text(encoding="utf-8"))["operation"] == "point_alignment"
