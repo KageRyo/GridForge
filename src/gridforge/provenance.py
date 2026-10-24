@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 import geopandas as gpd
@@ -57,7 +58,7 @@ def write_provenance(
         "created_at": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "output": output.name,
     }
-    temporary = sidecar.with_name(f".{sidecar.name}.tmp")
+    temporary = None
     try:
         serialized = json.dumps(
             record,
@@ -66,12 +67,19 @@ def write_provenance(
             indent=2,
             allow_nan=False,
         )
-        temporary.write_text(
-            serialized + "\n",
+        # Exclusive creation prevents a planted temporary link from redirecting writes.
+        with NamedTemporaryFile(
+            mode="w",
             encoding="utf-8",
-        )
+            dir=sidecar.parent,
+            prefix=f".{sidecar.name}.",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(serialized + "\n")
         temporary.replace(sidecar)
     except (OSError, TypeError, ValueError) as exc:
-        temporary.unlink(missing_ok=True)
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
         raise DatasetError(f"cannot write valid provenance sidecar {sidecar}: {exc}") from exc
     return sidecar
