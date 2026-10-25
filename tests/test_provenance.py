@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from datetime import datetime
 
 import pytest
@@ -74,3 +75,33 @@ def test_provenance_does_not_follow_preexisting_temporary_links(tmp_path, link_k
 
     assert outside.read_text(encoding="utf-8") == "keep outside data"
     assert json.loads(sidecar.read_text(encoding="utf-8"))["operation"] == "point_alignment"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_sidecar_preserves_ordinary_and_existing_file_permissions(tmp_path):
+    grid = create_grid(
+        GridSpec.from_mapping(
+            {
+                "crs": "EPSG:3826",
+                "cell_size": 20,
+                "bounds": {"min_x": 0, "min_y": 0, "max_x": 20, "max_y": 20},
+                "origin": {"x": 0, "y": 20},
+            }
+        )
+    )
+    reference = tmp_path / "ordinary"
+    reference.write_bytes(b"reference")
+    output = tmp_path / "features.parquet"
+    arguments = {
+        "operation": "point_alignment",
+        "source": "stations.csv",
+        "grid": grid,
+        "parameters": {},
+    }
+
+    sidecar = write_provenance(output, **arguments)
+    assert stat.S_IMODE(sidecar.stat().st_mode) == stat.S_IMODE(reference.stat().st_mode)
+    for mode in (0o640, 0o2640):
+        sidecar.chmod(mode)
+        write_provenance(output, **arguments)
+        assert stat.S_IMODE(sidecar.stat().st_mode) == 0o640
