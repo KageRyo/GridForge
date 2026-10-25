@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import stat
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 import geopandas as gpd
@@ -57,7 +59,6 @@ def write_provenance(
         "created_at": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "output": output.name,
     }
-    temporary = sidecar.with_name(f".{sidecar.name}.tmp")
     try:
         serialized = json.dumps(
             record,
@@ -66,12 +67,19 @@ def write_provenance(
             indent=2,
             allow_nan=False,
         )
-        temporary.write_text(
-            serialized + "\n",
-            encoding="utf-8",
-        )
-        temporary.replace(sidecar)
+        # A private directory protects exclusive creation while honoring the process umask.
+        with TemporaryDirectory(dir=sidecar.parent, prefix=f".{sidecar.name}.") as workspace:
+            temporary = Path(workspace) / sidecar.name
+            with temporary.open("x", encoding="utf-8") as stream:
+                stream.write(serialized + "\n")
+            try:
+                previous_mode = sidecar.lstat().st_mode
+            except FileNotFoundError:
+                pass
+            else:
+                if stat.S_ISREG(previous_mode):
+                    temporary.chmod(previous_mode & 0o777)
+            temporary.replace(sidecar)
     except (OSError, TypeError, ValueError) as exc:
-        temporary.unlink(missing_ok=True)
         raise DatasetError(f"cannot write valid provenance sidecar {sidecar}: {exc}") from exc
     return sidecar
