@@ -5,6 +5,6 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("gridforge-spatial")
 except PackageNotFoundError:  # pragma: no cover - editable/install builds provide metadata
-    __version__ = "0.1.1"
+    __version__ = "0.1.2"
 
 __all__ = ["__version__"]

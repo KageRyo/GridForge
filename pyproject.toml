@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gridforge-spatial"
-version = "0.1.1"
+version = "0.1.2"
 description = "Deterministic spatial grid alignment and dataset engineering toolkit"
 readme = "README.md"
 requires-python = ">=3.11"
