@@ -7,7 +7,7 @@
 
 GridForge is a Python toolkit and CLI for building canonical spatial grids and aligning point, polygon, and raster data to them. It produces complete, deterministic grid feature datasets that can be joined, validated, and traced back to the spatial transformation settings.
 
-Ordinary spatial joins answer questions such as which features intersect a geometry. They do not by themselves define stable cell IDs, edge behavior, coverage calculations, raster resampling, missing-cell policy, or whether two outputs use the same grid. GridForge makes those choices explicit.
+In GridForge, stable cell IDs, edge behavior, coverage calculations, raster resampling, and missing-cell policy are explicit settings, so you can check whether two outputs use the same grid.
 
 ## Install
 
